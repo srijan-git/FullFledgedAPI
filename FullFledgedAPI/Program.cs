@@ -1,10 +1,9 @@
-
 using AutoMapper;
 using FullFledgedAPI.Container;
 using FullFledgedAPI.Helper;
 using FullFledgedAPI.Repos;
 using FullFledgedAPI.Service;
-using Microsoft.AspNetCore.Cors.Infrastructure;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -49,19 +48,26 @@ namespace FullFledgedAPI
             //And to add default CORS policy we can write
             builder.Services.AddCors(p => p.AddDefaultPolicy(build => { build.WithOrigins("*").AllowAnyMethod().AllowAnyHeader(); }));
 
+            builder.Services.AddRateLimiter(_ => _.AddFixedWindowLimiter(policyName: "fixedwindow", options =>
+            {
+                options.Window = TimeSpan.FromSeconds(10);
+                options.PermitLimit = 1;
+                options.QueueLimit = 0;
+                options.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+            }).RejectionStatusCode = 401);
 
             //Logger
-            string logpth = builder.Configuration.GetSection("Logging:LogPath").Value;
+            string logpath = builder.Configuration.GetSection("Logging:LogPath").Value;
             var _logger = new LoggerConfiguration()
                 .MinimumLevel.Information()
                 .MinimumLevel.Override("microsoft", Serilog.Events.LogEventLevel.Warning)
                 .Enrich.FromLogContext()
-                .WriteTo.File(logpth)
+                .WriteTo.File(logpath)
                 .CreateLogger();
 
             builder.Logging.AddSerilog(_logger);
             var app = builder.Build();
-
+            app.UseRateLimiter();
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
@@ -70,8 +76,8 @@ namespace FullFledgedAPI
             }
 
             //Have to Incluse policy name to enable CORS 
-            app.UseCors("corspolicy");
-            
+            //app.UseCors("corspolicy");
+
             //And to Enable default CORS policy we can write
             app.UseCors();
 

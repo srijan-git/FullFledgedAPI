@@ -3,11 +3,13 @@ using FullFledgedAPI.Service;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace FullFledgedAPI.Controllers
 {
     //[DisableCors]
     // [EnableCors("corspolicy1")] //We can add CORS policy globally for all Action or 
+    [EnableRateLimiting("fixedwindow")]
     [Route("api/[controller]")]
     [ApiController]
     public class CustomerController : ControllerBase
@@ -19,7 +21,7 @@ namespace FullFledgedAPI.Controllers
         }
 
         //Like Here also
-        [EnableCors("corspolicy1")]
+        //[EnableCors("corspolicy1")]
         [HttpGet("GetAll")]
         public async Task<IActionResult> GetAll()
         {
@@ -31,7 +33,7 @@ namespace FullFledgedAPI.Controllers
             return Ok(data);
         }
 
-
+        [DisableRateLimiting]
         [HttpGet("GetByCode")]
         public async Task<IActionResult> GetByCode(int code)
         {
