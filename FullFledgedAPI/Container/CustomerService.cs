@@ -1,12 +1,10 @@
 ﻿using AutoMapper;
-using Azure;
 using FullFledgedAPI.Helper;
 using FullFledgedAPI.Modal;
 using FullFledgedAPI.Repos;
 using FullFledgedAPI.Repos.Models;
 using FullFledgedAPI.Service;
 using Microsoft.EntityFrameworkCore;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace FullFledgedAPI.Container
 {
@@ -14,11 +12,12 @@ namespace FullFledgedAPI.Container
     {
         private readonly FullFledgedAPIContext _context;
         private readonly IMapper _mapper;
-
-        public CustomerService(FullFledgedAPIContext context, IMapper mapper)
+        private readonly ILogger<CustomerService> _logger;
+        public CustomerService(FullFledgedAPIContext context, IMapper mapper, ILogger<CustomerService> logger)
         {
             _context = context;
             _mapper = mapper;
+            _logger = logger;
         }
 
         public async Task<APIResponse> Create(Customermodal data)
@@ -26,6 +25,7 @@ namespace FullFledgedAPI.Container
             APIResponse _response = new APIResponse();
             try
             {
+                _logger.LogInformation("Create Begins");
                 TblCustomer _customer = _mapper.Map<Customermodal, TblCustomer>(data);
                 await _context.TblCustomers.AddAsync(_customer);
                 await _context.SaveChangesAsync();
@@ -36,6 +36,8 @@ namespace FullFledgedAPI.Container
             {
                 _response.ResponseCode = 400;
                 _response.ErrorMessage = ex.Message;
+                _logger.LogError(ex.Message, ex);
+
             }
             return _response;
         }
@@ -102,7 +104,7 @@ namespace FullFledgedAPI.Container
                     _customer.Email = data.Email;
                     _customer.Phone = data.Phone;
                     _customer.IsActive = data.IsActive;
-                    _customer.CreditLimit= data.CreditLimit;
+                    _customer.CreditLimit = data.CreditLimit;
 
                     await _context.SaveChangesAsync();
                     _response.ResponseCode = 201;
