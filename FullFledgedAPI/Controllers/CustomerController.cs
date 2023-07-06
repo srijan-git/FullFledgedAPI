@@ -1,5 +1,6 @@
 ﻿using FullFledgedAPI.Modal;
 using FullFledgedAPI.Service;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 
 namespace FullFledgedAPI.Controllers
 {
+    [Authorize]
     //[DisableCors]
     // [EnableCors("corspolicy1")] //We can add CORS policy globally for all Action or 
     [EnableRateLimiting("fixedwindow")]

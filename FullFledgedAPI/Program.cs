@@ -1,11 +1,16 @@
 using AutoMapper;
 using FullFledgedAPI.Container;
 using FullFledgedAPI.Helper;
+using FullFledgedAPI.Modal;
 using FullFledgedAPI.Repos;
 using FullFledgedAPI.Service;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using System.Text;
 
 namespace FullFledgedAPI
 {
@@ -22,13 +27,41 @@ namespace FullFledgedAPI
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
-            //Dependency Injection
+            //Dependency Injection for Customer
             builder.Services.AddTransient<ICustomerService, CustomerService>();
+
+            //Dependency Injection for RefreshHandler
+            builder.Services.AddTransient<IRefreshHandler, RefreshHandler>();
+
 
             //Have to Register Database Service
             builder.Services.AddDbContext<FullFledgedAPIContext>(o => o.UseSqlServer(
                 builder.Configuration.GetConnectionString("apicon"))
                 );
+
+            //Basic Authentication
+            //builder.Services.AddAuthentication("BasicAuthentication").AddScheme<AuthenticationSchemeOptions, BasicAuthenticationHandler>("BasicAuthentication", null);
+
+            //JWT Authentication
+            var _authKey = builder.Configuration.GetValue<string>("JwtSettings:securityKey");
+            builder.Services.AddAuthentication(item =>
+            {
+                item.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                item.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(item =>
+            {
+                item.RequireHttpsMetadata = true;
+                item.SaveToken = true;
+                item.TokenValidationParameters = new TokenValidationParameters()
+                {
+                    ValidateIssuerSigningKey = true,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_authKey)),
+                    ValidateIssuer = false,
+                    ValidateAudience = false,
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
+
 
             //Automapper
             var automapper = new MapperConfiguration(item => item.AddProfile(new AutoMapperHandler()));
@@ -66,6 +99,11 @@ namespace FullFledgedAPI
                 .CreateLogger();
 
             builder.Logging.AddSerilog(_logger);
+
+            //JWT Configuration
+            var _jwtSetting = builder.Configuration.GetSection("JwtSettings");
+            builder.Services.Configure<JwtSettings>(_jwtSetting);
+
             var app = builder.Build();
             app.UseRateLimiter();
             // Configure the HTTP request pipeline.
@@ -82,6 +120,9 @@ namespace FullFledgedAPI
             app.UseCors();
 
             app.UseHttpsRedirection();
+
+            //Have to enable this middleware in order to run Basic Authentication or JWT Authentication
+            app.UseAuthentication();
 
             app.UseAuthorization();
 
